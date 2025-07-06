@@ -1,0 +1,39 @@
+{
+  "name": "blog-website",
+  "version": "1.0.0",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js",
+    "client": "cd client && npm start",
+    "server": "nodemon server/server.js",
+    "build": "cd client && npm run build",
+    "setup-db": "node setup-database.js",
+    "test-db": "node test-database.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "blog",
+    "website",
+    "react",
+    "nodejs",
+    "mysql",
+    "bootstrap"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "description": "A full-stack blog website built with React, Node.js, MySQL, and Bootstrap",
+  "dependencies": {
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.14.1",
+    "multer": "^2.0.1",
+    "express-validator": "^7.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
