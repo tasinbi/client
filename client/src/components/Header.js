@@ -29,8 +29,8 @@ const Header = () => {
             <i className="fas fa-blog"></i>
           </div>
           <div className="brand-text">
-            <h3 className="brand-title">BlogHub</h3>
-            <span className="brand-subtitle">Professional Blog Platform</span>
+            <h3 className="brand-title">Banglay IELTS</h3>
+            <span className="brand-subtitle">Your path to success starts here</span>
           </div>
         </Link>
         

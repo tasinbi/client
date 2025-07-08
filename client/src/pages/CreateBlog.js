@@ -3,25 +3,40 @@ import { CKEditor } from '@ckeditor/ckeditor5-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { generatePreviewSlug, isValidSlug, containsBangla } from '../utils/slugify';
+import { useAuth } from '../contexts/AuthContext';
+import CategoryManager from '../components/CategoryManager';
+import UniversalHeader from '../components/UniversalHeader';
 import '../styles/BlogEditor.css';
 
 const CreateBlog = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     content: '',
     slug: '',
     author: '',
-    category_id: ''
+    category_id: '',
+    meta_keywords: '',
+    meta_description: ''
   });
   const [categories, setCategories] = useState([]);
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+    // Set author name from logged-in user
+    if (user && user.username) {
+      setFormData(prev => ({
+        ...prev,
+        author: user.username
+      }));
+    }
+  }, [user]);
 
   const fetchCategories = async () => {
     try {
@@ -32,6 +47,11 @@ const CreateBlog = () => {
     }
   };
 
+  const handleCategoryManagerClose = () => {
+    setShowCategoryManager(false);
+    fetchCategories(); // Refresh categories after closing
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -39,27 +59,14 @@ const CreateBlog = () => {
       [name]: value
     }));
 
-    // Auto-generate slug from title
+    // Auto-generate Bangla-friendly slug from title
     if (name === 'title') {
-      const slug = value
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .trim();
+      const slug = generatePreviewSlug(value);
       setFormData(prev => ({
         ...prev,
         slug: slug
       }));
     }
-  };
-
-  const handleEditorChange = (event, editor) => {
-    const data = editor.getData();
-    setFormData(prev => ({
-      ...prev,
-      content: data
-    }));
   };
 
   const handleImageChange = (e) => {
@@ -99,6 +106,8 @@ const CreateBlog = () => {
 
   return (
     <div className="admin-editor-layout">
+      <UniversalHeader />
+      
       {/* Sidebar */}
       <div className="admin-sidebar">
         <div className="sidebar-header">
@@ -121,6 +130,13 @@ const CreateBlog = () => {
             <i className="fas fa-list"></i>
             All Blogs
           </Link>
+          <button 
+            className="menu-item menu-item-button"
+            onClick={() => setShowCategoryManager(true)}
+          >
+            <i className="fas fa-tags"></i>
+            All Categories
+          </button>
         </div>
         
         <div className="sidebar-actions">
@@ -182,6 +198,12 @@ const CreateBlog = () => {
               <label htmlFor="slug" className="form-label">
                 <i className="fas fa-link"></i>
                 Slug (URL)
+                {containsBangla(formData.slug) && (
+                  <span className="bangla-indicator">
+                    <i className="fas fa-language"></i>
+                    Bangla
+                  </span>
+                )}
               </label>
               <input
                 type="text"
@@ -189,51 +211,45 @@ const CreateBlog = () => {
                 name="slug"
                 value={formData.slug}
                 onChange={handleChange}
-                className="form-control"
-                placeholder="blog-url-slug"
-                required
+                className={`form-control ${formData.slug && !isValidSlug(formData.slug) ? 'invalid' : ''}`}
+                placeholder="blog-url-slug or বাংলা-স্লাগ"
               />
+              {formData.slug && (
+                <div className="slug-preview">
+                  <small className="form-help">
+                    <i className="fas fa-eye"></i>
+                    Preview: <span className="preview-url">blog.banglayielts.com/{formData.slug}</span>
+                  </small>
+                </div>
+              )}
+              {formData.slug && !isValidSlug(formData.slug) && (
+                <small className="form-error">
+                  <i className="fas fa-exclamation-triangle"></i>
+                  Invalid slug format. Use only letters, numbers, and hyphens.
+                </small>
+              )}
             </div>
 
-            <div className="form-row">
-              <div className="form-group half">
-                <label htmlFor="author" className="form-label">
-                  <i className="fas fa-user"></i>
-                  Author
-                </label>
-                <input
-                  type="text"
-                  id="author"
-                  name="author"
-                  value={formData.author}
-                  onChange={handleChange}
-                  className="form-control"
-                  placeholder="Author name"
-                  required
-                />
-              </div>
-
-              <div className="form-group half">
-                <label htmlFor="category_id" className="form-label">
-                  <i className="fas fa-tag"></i>
-                  Category
-                </label>
-                <select
-                  id="category_id"
-                  name="category_id"
-                  value={formData.category_id}
-                  onChange={handleChange}
-                  className="form-control"
-                  required
-                >
-                  <option value="">Select Category</option>
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="form-group">
+              <label htmlFor="category_id" className="form-label">
+                <i className="fas fa-tag"></i>
+                Category
+              </label>
+              <select
+                id="category_id"
+                name="category_id"
+                value={formData.category_id}
+                onChange={handleChange}
+                className="form-control"
+                required
+              >
+                <option value="">Select Category</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="form-group">
@@ -249,6 +265,51 @@ const CreateBlog = () => {
                 className="form-control"
                 accept="image/*"
               />
+            </div>
+
+            {/* SEO Fields */}
+            <div className="seo-section">
+              <h3 className="section-title">
+                <i className="fas fa-search"></i>
+                SEO Settings
+              </h3>
+              
+              <div className="form-group">
+                <label htmlFor="meta_keywords" className="form-label">
+                  <i className="fas fa-key"></i>
+                  Meta Keywords
+                </label>
+                <input
+                  type="text"
+                  id="meta_keywords"
+                  name="meta_keywords"
+                  value={formData.meta_keywords}
+                  onChange={handleChange}
+                  className="form-control"
+                  placeholder="keyword1, keyword2, keyword3 (comma separated)"
+                />
+                <small className="form-help">Enter keywords separated by commas for better SEO</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="meta_description" className="form-label">
+                  <i className="fas fa-file-alt"></i>
+                  Meta Description
+                </label>
+                <textarea
+                  id="meta_description"
+                  name="meta_description"
+                  value={formData.meta_description}
+                  onChange={handleChange}
+                  className="form-control"
+                  rows="3"
+                  placeholder="Brief description of your blog post (150-160 characters recommended)"
+                  maxLength="160"
+                />
+                <small className="form-help">
+                  {formData.meta_description.length}/160 characters
+                </small>
+              </div>
             </div>
 
             <div className="form-group">
@@ -284,6 +345,14 @@ const CreateBlog = () => {
           </form>
         </div>
       </div>
+
+      {/* Category Manager Modal */}
+      {showCategoryManager && (
+        <CategoryManager
+          onClose={handleCategoryManagerClose}
+          onCategoryChange={fetchCategories}
+        />
+      )}
     </div>
   );
 };
