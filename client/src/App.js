@@ -2,7 +2,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { useEffect } from 'react';
 import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import Footer from './components/Footer';
-import Header from './components/Header';
+import PixelTracking from './components/PixelTracking';
 import PrivateRoute from './components/PrivateRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import AdminDashboard from './pages/AdminDashboard';
@@ -11,6 +11,8 @@ import BlogPost from './pages/BlogPost';
 import CreateBlog from './pages/CreateBlog';
 import EditBlog from './pages/EditBlog';
 import Home from './pages/Home';
+import About from './pages/About';
+import RashedHossain from './pages/RashedHossain';
 import './styles/Global.css';
 
 function App() {
@@ -60,15 +62,23 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="App">
-          <Header />
+          {/* Pixel Tracking - Add your pixel IDs here */}
+          <PixelTracking 
+            facebookPixelId={process.env.REACT_APP_FACEBOOK_PIXEL_ID}
+            googleAnalyticsId={process.env.REACT_APP_GOOGLE_ANALYTICS_ID}
+          />
+          
           <main className="main-content">
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/rashed-hossain" element={<RashedHossain />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
               <Route path="/admin/create" element={<PrivateRoute><CreateBlog /></PrivateRoute>} />
               <Route path="/admin/edit/:id" element={<PrivateRoute><EditBlog /></PrivateRoute>} />
+              {/* Blog post route - this should be last to catch all remaining slugs */}
+              <Route path="/:slug" element={<BlogPost />} />
             </Routes>
           </main>
           <Footer />

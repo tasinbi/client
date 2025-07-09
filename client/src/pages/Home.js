@@ -1,16 +1,23 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import UniversalHeader from '../components/UniversalHeader';
+import Footer from '../components/Footer';
 import api from '../services/api';
+import { encodeSlug } from '../utils/slugify';
 import '../styles/Home.css';
 
 const Home = () => {
-  const [blogs, setBlogs] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [filteredBlogs, setFilteredBlogs] = useState([]);
+  const [popularBlogs, setPopularBlogs] = useState([]);
+  const [latestBlogs, setLatestBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(6);
+
+  // Comment out hero slider data and related states
+  /*
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const sliderRef = useRef(null);
 
   // Hero slider data
   const heroSlides = [
@@ -43,97 +50,46 @@ const Home = () => {
     }
   ];
 
+  // Create array with multiple sets of slides for seamless loop
+  const allSlides = [...heroSlides, ...heroSlides, ...heroSlides]; // 3 sets of slides
+  */
+
   useEffect(() => {
-    fetchBlogs();
-    fetchCategories();
+    fetchPopularBlogs();
+    fetchLatestBlogs();
   }, []);
 
-  const filterBlogs = useCallback(() => {
-    let filtered = blogs;
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(blog =>
-        (blog.title && blog.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (blog.content && blog.content.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (blog.author && blog.author.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-    }
-
-    // Filter by category
-    if (selectedCategory) {
-      filtered = filtered.filter(blog => blog.category_id === parseInt(selectedCategory));
-    }
-
-    setFilteredBlogs(filtered);
-  }, [blogs, searchTerm, selectedCategory]);
-
-  useEffect(() => {
-    filterBlogs();
-  }, [blogs, searchTerm, selectedCategory, filterBlogs]);
-
-  // Auto-slide functionality
+  // Comment out hero slider auto-advance effect
+  /*
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
     }, 5000);
-    return () => clearInterval(interval);
-  }, [heroSlides.length]);
 
-  const fetchBlogs = async () => {
+    return () => clearInterval(interval);
+  }, []);
+  */
+
+  const fetchPopularBlogs = async () => {
     try {
-      const response = await api.get('/blogs');
-      
-      if (response.data && response.data.blogs) {
-        // Filter out blogs with corrupted or invalid data
-        const validBlogs = response.data.blogs.filter(blog => {
-          const hasValidTitle = blog.title && 
-                               typeof blog.title === 'string' && 
-                               blog.title.trim().length > 0 &&
-                               !/^[^a-zA-Z0-9\s]+$/.test(blog.title); // Not just special characters
-          
-          const hasValidContent = blog.content && 
-                                 typeof blog.content === 'string' && 
-                                 blog.content.trim().length > 0;
-          
-          // Log problematic entries in development
-          if (!hasValidTitle || !hasValidContent) {
-            console.warn('Filtering out corrupted blog entry:', blog);
-          }
-          
-          return hasValidTitle && hasValidContent;
-        });
-        
-        setBlogs(validBlogs);
-      } else if (Array.isArray(response.data)) {
-        setBlogs(response.data);
-      } else {
-        setBlogs([]);
-      }
+      const response = await api.get('/blogs/popular/3');
+      setPopularBlogs(response.data || []);
     } catch (error) {
-      console.error('Error fetching blogs:', error);
-      setBlogs([]);
+      console.error('Error fetching popular blogs:', error);
+      setPopularBlogs([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCategories = async () => {
+  const fetchLatestBlogs = async () => {
     try {
-      const response = await api.get('/categories');
-      setCategories(response.data || []);
+      const response = await api.get('/blogs');
+      setLatestBlogs(response.data?.blogs || []);
     } catch (error) {
-      console.error('Error fetching categories:', error);
-      setCategories([]);
+      console.error('Error fetching latest blogs:', error);
+      setLatestBlogs([]);
     }
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const handleCategoryChange = (categoryId) => {
-    setSelectedCategory(categoryId === selectedCategory ? '' : categoryId);
   };
 
   const formatDate = (dateString) => {
@@ -144,46 +100,116 @@ const Home = () => {
     });
   };
 
-  const getCategoryName = (categoryId) => {
-    const category = categories.find(cat => cat.id === categoryId);
-    return category ? category.name : 'Uncategorized';
-  };
-
   const sanitizeContent = (content) => {
     if (!content || typeof content !== 'string') return 'No content available';
     
-    // Remove HTML tags and decode HTML entities
     const textContent = content
-      .replace(/<[^>]*>/g, '') // Remove HTML tags
-      .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
-      .replace(/&amp;/g, '&') // Replace &amp; with &
-      .replace(/&lt;/g, '<') // Replace &lt; with <
-      .replace(/&gt;/g, '>') // Replace &gt; with >
-      .replace(/&quot;/g, '"') // Replace &quot; with "
-      .replace(/&#39;/g, "'") // Replace &#39; with '
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
       .trim();
     
     return textContent.length > 0 ? textContent.substring(0, 120) : 'No content available';
   };
 
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+  // Pagination functions
+  const totalPages = Math.ceil(latestBlogs.length / itemsPerPage);
+  
+  const goToPage = (pageNumber) => {
+    setCurrentPage(pageNumber);
   };
 
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+  const renderPaginationNumbers = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+    if (endPage - startPage + 1 < maxPagesToShow) {
+      if (currentPage < totalPages / 2) {
+        endPage = Math.min(totalPages, maxPagesToShow);
+      } else {
+        startPage = Math.max(1, totalPages - maxPagesToShow + 1);
+      }
+    }
+
+    // Add first page if not included
+    if (startPage > 1) {
+      pageNumbers.push(
+        <button key={1} className="pagination-number" onClick={() => goToPage(1)}>1</button>
+      );
+      if (startPage > 2) {
+        pageNumbers.push(<span key="start-ellipsis" className="pagination-ellipsis">...</span>);
+      }
+    }
+
+    // Add page numbers
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(
+        <button
+          key={i}
+          className={`pagination-number ${currentPage === i ? 'active' : ''}`}
+          onClick={() => goToPage(i)}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    // Add last page if not included
+    if (endPage < totalPages) {
+      if (endPage < totalPages - 1) {
+        pageNumbers.push(<span key="end-ellipsis" className="pagination-ellipsis">...</span>);
+      }
+      pageNumbers.push(
+        <button
+          key={totalPages}
+          className="pagination-number"
+          onClick={() => goToPage(totalPages)}
+        >
+          {totalPages}
+        </button>
+      );
+    }
+
+    return pageNumbers;
   };
 
-  const goToSlide = (index) => {
-    setCurrentSlide(index);
+  // Get current page's blogs
+  const getCurrentPageBlogs = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return latestBlogs.slice(startIndex, endIndex);
   };
 
   return (
     <div className="homepage">
-      {/* Hero Slider Section */}
+      <UniversalHeader />
+      
+      {/* Simple Banner Section */}
+      <section className="simple-banner">
+        <div className="banner-content">
+          <h1>Welcome to Banglay IELTS</h1>
+          <p>Your trusted source for IELTS preparation and success</p>
+        </div>
+      </section>
+
+      {/* Comment out Hero Slider Section */}
+      {/*
       <section className="hero-slider">
         <div className="slider-container">
-          <div className="slides-wrapper" style={{ transform: `translateX(-${currentSlide * 100}%)` }}>
+          <div 
+            className="slides-wrapper" 
+            style={{ 
+              transform: `translateX(-${currentSlide * 33.333}%)`,
+              width: '300%' // For 3 slides
+            }}
+          >
             {heroSlides.map((slide, index) => (
               <div key={slide.id} className="slide">
                 <div className="slide-image">
@@ -207,162 +233,181 @@ const Home = () => {
             ))}
           </div>
           
-          {/* Navigation Controls */}
           <div className="slider-controls">
-            <button className="slider-btn prev-btn" onClick={prevSlide}>
+            <button 
+              className="slider-btn prev-btn" 
+              onClick={() => setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
+            >
               <i className="fas fa-chevron-left"></i>
             </button>
-            <button className="slider-btn next-btn" onClick={nextSlide}>
+            <button 
+              className="slider-btn next-btn" 
+              onClick={() => setCurrentSlide((prev) => (prev + 1) % heroSlides.length)}
+            >
               <i className="fas fa-chevron-right"></i>
             </button>
           </div>
           
-          {/* Slide Indicators */}
           <div className="slider-indicators">
             {heroSlides.map((_, index) => (
               <button
                 key={index}
                 className={`indicator ${currentSlide === index ? 'active' : ''}`}
-                onClick={() => goToSlide(index)}
+                onClick={() => setCurrentSlide(index)}
               ></button>
             ))}
           </div>
         </div>
       </section>
+      */}
 
-      {/* Search and Filter Section */}
-      <section className="search-filter-section">
-        <div className="container">
-          <div className="search-filter-container">
-            <div className="search-section">
-              <div className="search-box">
-                <i className="fas fa-search"></i>
-                <input
-                  type="text"
-                  placeholder="Search articles, authors, or topics..."
-                  value={searchTerm}
-                  onChange={handleSearchChange}
-                  className="search-input"
-                />
-                {searchTerm && (
-                  <button 
-                    className="clear-search" 
-                    onClick={() => setSearchTerm('')}
-                  >
-                    <i className="fas fa-times"></i>
-                  </button>
-                )}
+      {/* Popular Articles Section */}
+      {popularBlogs.length > 0 && (
+        <section className="popular-articles-section">
+          <div className="container">
+            <div className="section-header">
+              <div className="section-title-area">
+                <h2 className="section-title">
+                  <i className="fas fa-fire"></i>
+                  Popular Articles
+                </h2>
               </div>
             </div>
             
-            <div className="category-filter">
-              <h4>Categories</h4>
-              <div className="category-buttons">
-                <button
-                  className={`category-btn ${selectedCategory === '' ? 'active' : ''}`}
-                  onClick={() => handleCategoryChange('')}
-                >
-                  All
-                </button>
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    className={`category-btn ${selectedCategory === category.id.toString() ? 'active' : ''}`}
-                    onClick={() => handleCategoryChange(category.id.toString())}
-                  >
-                    {category.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Blog Cards Section */}
-      <section id="blog-section" className="blog-cards-section">
-        <div className="container">
-          <div className="section-header">
-            <h2>Latest Articles</h2>
-            <p>Discover our latest blog posts and insights</p>
-          </div>
-          
-          {loading ? (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>Loading articles...</p>
-            </div>
-          ) : filteredBlogs.length === 0 ? (
-            <div className="empty-state">
-              <i className="fas fa-search"></i>
-              <h3>No articles found</h3>
-              <p>
-                {searchTerm || selectedCategory 
-                  ? 'Try adjusting your search or filter criteria.' 
-                  : 'There are currently no blog posts available.'}
-              </p>
-              {(searchTerm || selectedCategory) && (
-                <button 
-                  className="btn-clear-filters"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setSelectedCategory('');
-                  }}
-                >
-                  Clear Filters
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="blog-grid">
-              {filteredBlogs.map((blog) => (
-                <div key={blog.id} className="blog-card">
-                  <Link to={`/blog/${blog.slug || blog.id}`} className="blog-card-link">
-                    <div className="blog-card-image">
+            <div className="articles-static-grid">
+              {popularBlogs.map((blog) => (
+                <article key={blog.id} className="article-card">
+                  <Link to={`/${encodeSlug(blog.slug || blog.id)}`} className="article-link">
+                    <div className="article-image-container">
                       <img
                         src={blog.image ? `http://localhost:5000/uploads/${blog.image}` : 'https://via.placeholder.com/400x250?text=Blog+Image'}
                         alt={blog.title || 'Blog Post'}
+                        className="article-image"
                         onError={(e) => {
                           e.target.src = 'https://via.placeholder.com/400x250/6c757d/ffffff?text=No+Image';
                         }}
                       />
-                      <div className="blog-card-overlay">
-                        <div className="blog-category">
-                          {getCategoryName(blog.category_id)}
-                        </div>
-                      </div>
+                      <div className="article-overlay"></div>
                     </div>
                     
-                    <div className="blog-card-content">
-                      <h3 className="blog-card-title">
+                    <div className="article-content">
+                      <h3 className="article-title">
                         {blog.title && blog.title.trim() !== '' ? blog.title : 'Untitled Post'}
                       </h3>
-                      <div className="blog-card-meta">
-                        <span className="blog-author">
+                      <p className="article-excerpt">
+                        {sanitizeContent(blog.content)}...
+                      </p>
+                      <div className="article-meta">
+                        <span className="meta-item">
                           <i className="fas fa-user"></i>
                           {blog.author || 'Unknown Author'}
                         </span>
-                        <span className="blog-date">
+                        <span className="meta-item">
                           <i className="fas fa-calendar"></i>
                           {formatDate(blog.created_at)}
                         </span>
-                      </div>
-                      <div className="blog-card-excerpt">
-                        {sanitizeContent(blog.content)}...
-                      </div>
-                      <div className="blog-card-footer">
-                        <span className="read-more">
-                          Read More <i className="fas fa-arrow-right"></i>
+                        <span className="article-views">
+                          <i className="fas fa-eye"></i>
+                          {blog.views || 0} views
                         </span>
                       </div>
                     </div>
                   </Link>
-                </div>
+                </article>
               ))}
             </div>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
+
+      {/* Latest Articles Section */}
+      {latestBlogs.length > 0 && (
+        <section className="latest-articles-section">
+          <div className="container">
+            <div className="section-header">
+              <div className="section-title-area">
+                <h2 className="section-title">
+                  <i className="fas fa-clock"></i>
+                  Latest Articles
+                </h2>
+              </div>
+            </div>
+            
+            <div className="articles-static-grid">
+              {getCurrentPageBlogs().map((blog) => (
+                <article key={blog.id} className="article-card">
+                  <Link to={`/${encodeSlug(blog.slug || blog.id)}`} className="article-link">
+                    <div className="article-image-container">
+                      <img
+                        src={blog.image ? `http://localhost:5000/uploads/${blog.image}` : 'https://via.placeholder.com/400x250?text=Blog+Image'}
+                        alt={blog.title || 'Blog Post'}
+                        className="article-image"
+                        onError={(e) => {
+                          e.target.src = 'https://via.placeholder.com/400x250/6c757d/ffffff?text=No+Image';
+                        }}
+                      />
+                      <div className="article-overlay">
+                        <div className="article-category">
+                          {blog.category_name || 'Uncategorized'}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="article-meta-small">
+                      <span className="meta-item-small">
+                        <i className="fas fa-user"></i>
+                        {blog.author || 'Unknown Author'}
+                      </span>
+                      <span className="meta-item-small">
+                        <i className="fas fa-calendar"></i>
+                        {formatDate(blog.created_at)}
+                      </span>
+                    </div>
+                    
+                    <div className="article-content">
+                      <h3 className="article-title">
+                        {blog.title && blog.title.trim() !== '' ? blog.title : 'Untitled Post'}
+                      </h3>
+                      <p className="article-excerpt">
+                        {sanitizeContent(blog.content)}...
+                      </p>
+                      <div className="read-more">
+                        Read More <i className="fas fa-arrow-right"></i>
+                      </div>
+                    </div>
+                  </Link>
+                </article>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="pagination-container">
+                <div className="pagination">
+                  <button 
+                    className={`pagination-btn prev ${currentPage === 1 ? 'disabled' : ''}`}
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <i className="fas fa-chevron-left"></i> Previous
+                  </button>
+
+                  <div className="pagination-numbers">
+                    {renderPaginationNumbers()}
+                  </div>
+
+                  <button 
+                    className={`pagination-btn next ${currentPage === totalPages ? 'disabled' : ''}`}
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next <i className="fas fa-chevron-right"></i>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 };

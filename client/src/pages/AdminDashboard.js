@@ -1,17 +1,31 @@
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import CategoryManager from '../components/CategoryManager';
+import UniversalHeader from '../components/UniversalHeader';
 import '../styles/AdminDashboard.css';
 
 const AdminDashboard = () => {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [stats, setStats] = useState({
     totalBlogs: 0,
     totalCategories: 0,
-    recentBlogs: 0
+    recentBlogs: 0,
+    totalViews: 0
   });
+
+  // Format numbers for display
+  const formatNumber = (num) => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+  };
 
   useEffect(() => {
     fetchBlogs();
@@ -32,25 +46,16 @@ const AdminDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const blogsResponse = await axios.get('http://localhost:5000/api/blogs');
-      const categoriesResponse = await axios.get('http://localhost:5000/api/categories');
-      
-      const totalBlogs = blogsResponse.data.blogs.length;
-      const totalCategories = categoriesResponse.data.categories.length;
-      const recentBlogs = blogsResponse.data.blogs.filter(blog => {
-        const blogDate = new Date(blog.created_at);
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return blogDate >= weekAgo;
-      }).length;
-
-      setStats({
-        totalBlogs,
-        totalCategories,
-        recentBlogs
-      });
+      const response = await axios.get('http://localhost:5000/api/blogs/stats');
+      setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
+      setStats({
+        totalBlogs: 0,
+        totalCategories: 0,
+        recentBlogs: 0,
+        totalViews: 0
+      });
     }
   };
 
@@ -66,6 +71,11 @@ const AdminDashboard = () => {
         console.error('Error deleting blog:', error);
       }
     }
+  };
+
+  const handleCategoryManagerClose = () => {
+    setShowCategoryManager(false);
+    fetchStats(); // Refresh stats after closing
   };
 
   if (loading) {
@@ -97,6 +107,8 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard">
+      <UniversalHeader />
+      
       {/* Welcome Section */}
       <div className="welcome-section">
         <div className="welcome-content">
@@ -118,18 +130,28 @@ const AdminDashboard = () => {
             <i className="fas fa-blog"></i>
           </div>
           <div className="stat-content">
-            <h3>{stats.totalBlogs}</h3>
+            <h3>{formatNumber(stats.totalBlogs)}</h3>
             <p>Total Blogs</p>
           </div>
         </div>
         
-        <div className="stat-card">
+        <div className="stat-card categories-stat-card">
           <div className="stat-icon">
             <i className="fas fa-tags"></i>
           </div>
           <div className="stat-content">
-            <h3>{stats.totalCategories}</h3>
+            <h3>{formatNumber(stats.totalCategories)}</h3>
             <p>Categories</p>
+          </div>
+          <div className="stat-action">
+            <button 
+              className="manage-btn"
+              onClick={() => setShowCategoryManager(true)}
+              title="Manage Categories"
+            >
+              <i className="fas fa-cog"></i>
+              Manage
+            </button>
           </div>
         </div>
         
@@ -138,8 +160,18 @@ const AdminDashboard = () => {
             <i className="fas fa-clock"></i>
           </div>
           <div className="stat-content">
-            <h3>{stats.recentBlogs}</h3>
+            <h3>{formatNumber(stats.recentBlogs)}</h3>
             <p>This Week</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">
+            <i className="fas fa-eye"></i>
+          </div>
+          <div className="stat-content">
+            <h3>{formatNumber(stats.totalViews)}</h3>
+            <p>Total Views</p>
           </div>
         </div>
       </div>
@@ -176,7 +208,11 @@ const AdminDashboard = () => {
                 <div className="blog-content">
                   <h3>{blog.title}</h3>
                   <p className="blog-date">
-                    {new Date(blog.created_at).toLocaleDateString()}
+                    {new Date(blog.created_at).toLocaleDateString('en-GB', { 
+                              day: '2-digit', 
+                              month: 'long', 
+                              year: 'numeric' 
+                            })}
                   </p>
                   <div className="blog-actions">
                     <Link to={`/admin/edit/${blog.id}`} className="btn-edit">
@@ -197,6 +233,14 @@ const AdminDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Category Manager Modal */}
+      {showCategoryManager && (
+        <CategoryManager
+          onClose={handleCategoryManagerClose}
+          onCategoryChange={fetchStats}
+        />
+      )}
     </div>
   );
 };
