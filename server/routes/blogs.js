@@ -196,8 +196,8 @@ router.post('/', authMiddleware, upload.single('image'), [
       slug = await generateUniqueSlug(title, db);
     } else {
       // Check if provided slug already exists
-      const [existingBlog] = await db.execute('SELECT id FROM blogs WHERE slug = ?', [slug]);
-      if (existingBlog.length > 0) {
+    const [existingBlog] = await db.execute('SELECT id FROM blogs WHERE slug = ?', [slug]);
+    if (existingBlog.length > 0) {
         slug = await generateUniqueSlug(title, db);
       }
     }
@@ -246,8 +246,8 @@ router.put('/:id', authMiddleware, upload.single('image'), [
       slug = await generateUniqueSlug(title, db, id);
     } else {
       // Check if provided slug already exists for different blog
-      const [existingBlog] = await db.execute('SELECT id FROM blogs WHERE slug = ? AND id != ?', [slug, id]);
-      if (existingBlog.length > 0) {
+    const [existingBlog] = await db.execute('SELECT id FROM blogs WHERE slug = ? AND id != ?', [slug, id]);
+    if (existingBlog.length > 0) {
         slug = await generateUniqueSlug(title, db, id);
       }
     }

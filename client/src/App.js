@@ -11,6 +11,8 @@ import BlogPost from './pages/BlogPost';
 import CreateBlog from './pages/CreateBlog';
 import EditBlog from './pages/EditBlog';
 import Home from './pages/Home';
+import About from './pages/About';
+import RashedHossain from './pages/RashedHossain';
 import './styles/Global.css';
 
 function App() {
@@ -69,6 +71,8 @@ function App() {
           <main className="main-content">
             <Routes>
               <Route path="/" element={<Home />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/rashed-hossain" element={<RashedHossain />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
               <Route path="/admin/create" element={<PrivateRoute><CreateBlog /></PrivateRoute>} />

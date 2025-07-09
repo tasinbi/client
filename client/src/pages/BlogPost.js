@@ -225,10 +225,7 @@ const BlogPost = () => {
                 <div className="d-flex gap-3 justify-content-center">
                 <Link to="/" className="btn btn-primary btn-lg rounded-pill px-4">
                   <i className="fas fa-home me-2"></i>Go Back Home
-                </Link>
-                  <Link to="/admin" className="btn btn-outline-secondary btn-lg rounded-pill px-4">
-                    <i className="fas fa-user-shield me-2"></i>Admin Panel
-                  </Link>
+                </Link> 
                 </div>
               </div>
             </div>
@@ -450,10 +447,10 @@ const BlogPost = () => {
                       </div>
                       <div className="recent-post-content">
                         <h6>
-                            <Link to={`/${encodeSlug(recentBlog.slug)}`}>{truncateTitle(recentBlog.title, 10)}</Link>
+                            <Link to={`/${encodeSlug(recentBlog.slug)}`}>{truncateTitle(recentBlog.title, 6)}</Link>
                         </h6>
                           <p className="recent-post-excerpt">
-                            {truncateContent(recentBlog.content, 12)}
+                            {truncateContent(recentBlog.content, 6)}
                           </p>
                         <div className="recent-post-meta">
                           <span className="recent-post-date">

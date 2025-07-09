@@ -13,12 +13,9 @@ const NotFound = () => {
               <p className="text-muted mb-4">
                 The page you're looking for doesn't exist or may have been moved.
               </p>
-              <div className="d-flex gap-3 justify-content-center">
+              <div className="d-flex justify-content-center">
                 <Link to="/" className="btn btn-primary btn-lg rounded-pill px-4">
                   <i className="fas fa-home me-2"></i>Go Home
-                </Link>
-                <Link to="/admin" className="btn btn-outline-secondary btn-lg rounded-pill px-4">
-                  <i className="fas fa-user-shield me-2"></i>Admin Panel
                 </Link>
               </div>
             </div>

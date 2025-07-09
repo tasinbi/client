@@ -231,25 +231,25 @@ const CreateBlog = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="category_id" className="form-label">
-                <i className="fas fa-tag"></i>
-                Category
-              </label>
-              <select
-                id="category_id"
-                name="category_id"
-                value={formData.category_id}
-                onChange={handleChange}
-                className="form-control"
-                required
-              >
-                <option value="">Select Category</option>
-                {categories.map(category => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+                <label htmlFor="category_id" className="form-label">
+                  <i className="fas fa-tag"></i>
+                  Category
+                </label>
+                <select
+                  id="category_id"
+                  name="category_id"
+                  value={formData.category_id}
+                  onChange={handleChange}
+                  className="form-control"
+                  required
+                >
+                  <option value="">Select Category</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
             </div>
 
             <div className="form-group">
