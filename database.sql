@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS blog_website;
-USE blog_website;
+CREATE DATABASE IF NOT EXISTS new_blog_biic;
+USE new_blog_biic;
 
 -- Admin table
 CREATE TABLE IF NOT EXISTS admins (
